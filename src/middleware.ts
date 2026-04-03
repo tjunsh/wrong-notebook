@@ -6,6 +6,10 @@ import { createLogger } from "@/lib/logger";
 const logger = createLogger('middleware');
 
 export async function middleware(req: NextRequest) {
+    if (process.env.NEXT_PUBLIC_LOCAL_ONLY_MOBILE === 'true') {
+        return NextResponse.next();
+    }
+
     // Debug logging for middleware
     logger.debug({ method: req.method, path: req.nextUrl.pathname }, 'Processing request');
 

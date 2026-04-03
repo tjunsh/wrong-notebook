@@ -626,6 +626,91 @@ async function clearPracticeStats(): Promise<Record<string, never>> {
   return {}
 }
 
+async function getAdminUsers(ctx: LocalApiContext): Promise<Array<{ id: string; email: string; name: string; role: string; isActive: boolean; createdAt: string; _count: { errorItems: number; practiceRecords: number } }>> {
+  const rows = await ctx.db.query<{ id: string; display_name: string; created_at: number }>(
+    `SELECT id, display_name, created_at FROM profiles WHERE id = ?`,
+    [ctx.ownerProfileId],
+  )
+  const profile = rows[0]
+  return [
+    {
+      id: profile?.id ?? ctx.ownerProfileId,
+      email: 'local@offline',
+      name: profile?.display_name ?? 'Local User',
+      role: 'admin',
+      isActive: true,
+      createdAt: nowIso(profile?.created_at ?? Date.now()),
+      _count: { errorItems: 0, practiceRecords: 0 },
+    },
+  ]
+}
+
+async function patchAdminUser(): Promise<Record<string, never>> {
+  return {}
+}
+
+async function deleteAdminUser(): Promise<Record<string, never>> {
+  return {}
+}
+
+async function migrateTags(ctx: LocalApiContext): Promise<{ count: number }> {
+  const rows = await ctx.db.query<{ name: string }>(
+    `SELECT DISTINCT name FROM tags WHERE owner_profile_id = ?`,
+    [ctx.ownerProfileId],
+  )
+  return { count: rows.length }
+}
+
+async function resetSystem(ctx: LocalApiContext): Promise<Record<string, never>> {
+  await ctx.db.execute(`DELETE FROM error_item_tags`)
+  await ctx.db.execute(`DELETE FROM tags WHERE owner_profile_id = ?`, [ctx.ownerProfileId])
+  await ctx.db.execute(`DELETE FROM error_images WHERE owner_profile_id = ?`, [ctx.ownerProfileId])
+  await ctx.db.execute(`DELETE FROM review_records WHERE owner_profile_id = ?`, [ctx.ownerProfileId])
+  await ctx.db.execute(`DELETE FROM ai_tasks WHERE owner_profile_id = ?`, [ctx.ownerProfileId])
+  await ctx.db.execute(`DELETE FROM error_items WHERE owner_profile_id = ?`, [ctx.ownerProfileId])
+  await ctx.db.execute(`DELETE FROM notebooks WHERE owner_profile_id = ?`, [ctx.ownerProfileId])
+  return {}
+}
+
+async function registerStatus(): Promise<{ allowRegistration: boolean }> {
+  return { allowRegistration: false }
+}
+
+async function registerLocal(body?: string): Promise<{ ok: boolean }> {
+  const payload = parseJsonBody<{ name?: string }>(body)
+  const name = payload.name?.trim() || 'Local User'
+  const ctx = await getContext()
+  await ctx.db.execute(`UPDATE profiles SET display_name = ?, updated_at = ? WHERE id = ?`, [name, Date.now(), ctx.ownerProfileId])
+  return { ok: true }
+}
+
+async function getTagsStats(ctx: LocalApiContext): Promise<{ stats: Array<{ tag: string; count: number }> }> {
+  return getTagStats(ctx)
+}
+
+async function createTag(ctx: LocalApiContext, body?: string): Promise<{ id: string; name: string }> {
+  const payload = parseJsonBody<{ name?: string }>(body)
+  const name = payload.name?.trim()
+  if (!name) {
+    throw new ApiError(400, 'TAG_NAME_REQUIRED', { message: 'TAG_NAME_REQUIRED' })
+  }
+  const id = `tag_${name}`
+  await ctx.db.execute(
+    `INSERT OR IGNORE INTO tags (id, owner_profile_id, name, created_at) VALUES (?, ?, ?, ?)`,
+    [id, ctx.ownerProfileId, name, Date.now()],
+  )
+  return { id, name }
+}
+
+async function deleteTag(ctx: LocalApiContext, url: URL): Promise<Record<string, never>> {
+  const tagId = url.searchParams.get('id')
+  if (!tagId) {
+    throw new ApiError(400, 'TAG_ID_REQUIRED', { message: 'TAG_ID_REQUIRED' })
+  }
+  await ctx.db.execute(`DELETE FROM tags WHERE id = ? AND owner_profile_id = ?`, [tagId, ctx.ownerProfileId])
+  return {}
+}
+
 async function generatePracticeQuestion(body?: string): Promise<ParsedQuestion> {
   const payload = parseJsonBody<{ errorItemId?: string; difficulty?: 'easy' | 'medium' | 'hard' | 'harder' }>(body)
   if (!payload.errorItemId) {
@@ -745,8 +830,14 @@ export async function dispatchLocalApi(url: string, method: HttpMethod, body?: s
     return updateErrorItem(ctx, errorItemId, body)
   }
 
+  if (path === '/api/tags' && method === 'POST') {
+    return createTag(ctx, body)
+  }
+  if (path === '/api/tags' && method === 'DELETE') {
+    return deleteTag(ctx, fullUrl)
+  }
   if (path === '/api/tags/stats' && method === 'GET') {
-    return getTagStats(ctx)
+    return getTagsStats(ctx)
   }
 
   if (path === '/api/analytics' && method === 'GET') {
@@ -757,6 +848,27 @@ export async function dispatchLocalApi(url: string, method: HttpMethod, body?: s
   }
   if (path === '/api/stats/practice/clear' && method === 'DELETE') {
     return clearPracticeStats()
+  }
+  if (path === '/api/admin/users' && method === 'GET') {
+    return getAdminUsers(ctx)
+  }
+  if (path.startsWith('/api/admin/users/') && method === 'PATCH') {
+    return patchAdminUser()
+  }
+  if (path.startsWith('/api/admin/users/') && method === 'DELETE') {
+    return deleteAdminUser()
+  }
+  if (path === '/api/admin/system-reset' && method === 'POST') {
+    return resetSystem(ctx)
+  }
+  if (path === '/api/admin/migrate-tags' && method === 'POST') {
+    return migrateTags(ctx)
+  }
+  if (path === '/api/register/status' && method === 'GET') {
+    return registerStatus()
+  }
+  if (path === '/api/register' && method === 'POST') {
+    return registerLocal(body)
   }
   if (path === '/api/practice/generate' && method === 'POST') {
     return generatePracticeQuestion(body)
