@@ -88,16 +88,7 @@ jobs:
       - name: Apply arm64 ABI filter
         run: |
           if [ -f "android/app/build.gradle" ] && ! grep -q "abiFilters" android/app/build.gradle; then
-            cat >> android/app/build.gradle <<EOF
-
-android {
-    defaultConfig {
-        ndk {
-            abiFilters '${TARGET_ABI}'
-        }
-    }
-}
-EOF
+            printf '\nandroid {\n    defaultConfig {\n        ndk {\n            abiFilters "'%s'"\n        }\n    }\n}\n' "${TARGET_ABI}" >> android/app/build.gradle
           fi
 
       - name: Setup Java
