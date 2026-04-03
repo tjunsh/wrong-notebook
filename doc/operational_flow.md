@@ -164,7 +164,7 @@ Zod Schema 验证
 5.  **配置文件管理**：
     *   使用 `.gitkeep` 保留 `config` 目录
     *   敏感配置文件已从 Git 历史中清除
-    *   确保 Docker 构建正常
+    *   确保 Android APK GitHub Actions 构建正常
 
 ### 3.5 待优化点
 

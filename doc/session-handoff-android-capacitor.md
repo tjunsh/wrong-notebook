@@ -25,16 +25,19 @@
 
 ## Important Technical Note
 
-Current project stack includes Next.js runtime features (NextAuth/Prisma/server-side logic), so full static export parity is unlikely.
+Current branch has moved to **offline-first Android implementation**:
 
-Recommended production path:
-- Android Capacitor shell + remote HTTPS backend domain.
+- local sqlite persistence
+- local queue/runtime wiring
+- APK packaging via GitHub Actions
+
+Cloud backend is optional for enhanced AI capabilities, but Android packaging/installation itself is independent.
 
 ## Suggested Next Execution Steps
 
 1. Add Capacitor dependencies and config files.
 2. Generate Android native project (`npx cap add android`).
-3. Configure appId, appName, server URL.
+3. Configure appId, appName, and local runtime bridge.
 4. Sync and build debug APK in Android Studio.
 5. Verify login, wrong-item CRUD, AI analysis flow on emulator/device.
 

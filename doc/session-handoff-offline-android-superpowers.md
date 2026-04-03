@@ -5,7 +5,7 @@
 Continue delivering an **offline-first Android APK path** for wrong-notebook:
 
 - Local data persistence: SQLite (Capacitor runtime)
-- AI processing: cloud-only queue (OpenAI-compatible / Gemini-compatible)
+- AI processing: local-first queue with optional online provider integration
 - UI aligned with Pencil design for queue state
 - Ready for APK-side validation flow (not localhost-dependent)
 

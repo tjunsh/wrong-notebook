@@ -14,29 +14,26 @@ Based on repository structure and dependencies:
 
 ### Key Conclusion
 
-This project is **not purely static frontend**. It depends on Node runtime features (auth/session/database/server actions or route handlers). Therefore:
+Current target branch is **Android offline-first**:
 
-- `next export` static-only packaging is not enough for full feature parity.
-- The recommended Android strategy is:
-  - Keep backend as a separate deployable service (cloud/VPS/self-hosted)
-  - Use Capacitor Android app as a native WebView shell loading either:
-    - bundled static frontend + remote API, or
-    - remote web app URL directly (fastest first delivery)
+- APK build and installation are local and do not require cloud deployment.
+- Local sqlite + offline runtime path is the baseline.
+- Optional cloud AI calls can be layered on top when network is available.
 
 ## 3. Target Architecture
 
 ```text
 Android App (Capacitor WebView)
-    └── Loads Web UI (local build assets or remote URL)
-            └── Calls Backend API/Auth/AI services
-                    └── Prisma + SQLite (or server DB)
+    └── Loads local app UI and offline runtime
+            └── Local sqlite + offline queue/services
+                    └── Optional online provider integration when available
 ```
 
 ### Recommended phases
 
-1. **Phase A (MVP)**: Android shell loads deployed web domain (`server.url`) for fastest launch.
-2. **Phase B**: Gradually optimize mobile UX and native integrations (camera/share/file/image pick).
-3. **Phase C**: Optional offline/read-only cache and notification features.
+1. **Phase A (MVP)**: Android local runtime + sqlite baseline.
+2. **Phase B**: Mobile UX and native integrations (camera/share/file/image pick).
+3. **Phase C**: Optional cloud-enhanced AI path and sync.
 
 ## 4. Capacitor Integration Plan
 
@@ -59,8 +56,7 @@ Create `capacitor.config.ts`:
 
 - `appId`: `com.wttwins.wrongnotebook`
 - `appName`: `Wrong Notebook`
-- `webDir`: directory containing frontend build output (or placeholder when remote URL mode)
-- `server.url`: deployed HTTPS domain for MVP
+- `webDir`: directory containing frontend build output
 - `android.allowMixedContent`: false (default secure mode)
 
 Example (MVP remote-url mode):
@@ -115,15 +111,14 @@ If local bundled assets are used later:
 
 ## 6. Security & Compliance
 
-- Enforce HTTPS only (`cleartext: false`)
-- Restrict navigation domain (avoid open redirects)
-- Use secure cookie settings on backend (`Secure`, `HttpOnly`, proper `SameSite`)
-- Add Android network security config only if strictly needed
+- Keep local data encrypted/protected according to Android best practices
+- Restrict external network access to explicit optional integrations only
+- Add Android network security config only if strictly needed for optional cloud features
 
 ## 7. Risks and Mitigations
 
-1. **SSR/runtime coupling risk**
-   - Mitigation: keep backend service independent; app consumes remote domain
+1. **Runtime coupling risk**
+   - Mitigation: keep offline core path independent from optional network services
 2. **WebView compatibility issues for file upload/camera**
    - Mitigation: implement Capacitor Camera/File plugins fallback
 3. **Session persistence differences on Android WebView**
@@ -155,7 +150,7 @@ If local bundled assets are used later:
 - [ ] `npx cap add android` successful
 - [ ] `npx cap sync android` successful
 - [ ] Android Studio build successful (debug)
-- [ ] Login/logout works
+- [ ] Local entry/unlock and offline flows work
 - [ ] Wrong notebook CRUD works
 - [ ] Image upload/crop works
 - [ ] AI analysis end-to-end works

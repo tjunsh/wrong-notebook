@@ -6,7 +6,7 @@ This document consolidates the delivered wireframes for the offline-first Androi
 
 - Target: Android standalone app
 - Data mode: local-first (offline core)
-- AI mode: cloud-enhanced (OpenAI-compatible / Gemini-compatible)
+- AI mode: local-first queue, optional online provider enhancement
 
 ---
 
