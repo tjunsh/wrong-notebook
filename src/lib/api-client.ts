@@ -27,6 +27,14 @@ async function request<T>(url: string, options: RequestOptions = {}): Promise<T>
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
 
+    if (typeof window !== 'undefined' && window.__OFFLINE_SQLITE_CONNECTION__ && finalUrl.startsWith('/api/')) {
+        clearTimeout(timeoutId);
+        const { dispatchLocalApi } = await import('@/offline/mobile/local-api');
+        const method = ((rest.method ?? 'GET') as string).toUpperCase() as 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+        const body = typeof rest.body === 'string' ? rest.body : undefined;
+        return (await dispatchLocalApi(finalUrl, method, body)) as T;
+    }
+
     try {
         const res = await fetch(finalUrl, {
             headers: {
