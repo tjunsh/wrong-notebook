@@ -15,6 +15,8 @@ describe('route ui parity rollout', () => {
       'src/app/notebooks/page.tsx',
       'src/app/notebooks/[id]/page.tsx',
       'src/app/notebooks/[id]/add/page.tsx',
+      'src/app/practice/page.tsx',
+      'src/app/print-preview/page.tsx',
       'src/app/stats/page.tsx',
       'src/app/tags/page.tsx',
       'src/app/login/page.tsx',

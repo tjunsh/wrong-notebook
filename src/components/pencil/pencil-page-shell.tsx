@@ -1,16 +1,18 @@
 import { ReactNode } from 'react'
+import { PencilBottomTabBar } from './pencil-bottom-tab-bar'
 
 interface PencilPageShellProps {
   title: string
   subtitle?: string
   actions?: ReactNode
   children: ReactNode
+  showBottomNav?: boolean
 }
 
-export function PencilPageShell({ title, subtitle, actions, children }: PencilPageShellProps) {
+export function PencilPageShell({ title, subtitle, actions, children, showBottomNav = true }: PencilPageShellProps) {
   return (
     <main className="min-h-screen bg-background">
-      <div className="container mx-auto max-w-6xl space-y-6 p-4 pb-20 md:p-8">
+      <div className="container mx-auto max-w-6xl space-y-6 p-4 pb-24 md:p-8 md:pb-28">
         <header className="flex items-start justify-between gap-4">
           <div className="space-y-1">
             <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{title}</h1>
@@ -20,6 +22,7 @@ export function PencilPageShell({ title, subtitle, actions, children }: PencilPa
         </header>
         {children}
       </div>
+      {showBottomNav ? <PencilBottomTabBar /> : null}
     </main>
   )
 }

@@ -14,6 +14,9 @@ import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { apiClient } from "@/lib/api-client";
 import { AppConfig } from "@/types/api";
 import { frontendLogger } from "@/lib/frontend-logger";
+import { PencilPageShell } from "@/components/pencil/pencil-page-shell";
+import { PencilSectionCard } from "@/components/pencil/pencil-section-card";
+import { PencilErrorState } from "@/components/pencil/pencil-error-state";
 
 export const dynamic = 'force-dynamic';
 
@@ -126,12 +129,21 @@ function PracticeContent() {
     };
 
     if (!errorItemId) {
-        return <div className="p-8 text-center">{t.practice.invalidRequest || "Invalid Request"}</div>;
+        return (
+            <PencilPageShell title={t.practice.title} showBottomNav={true}>
+                <PencilErrorState
+                    title={t.common?.error || "Error"}
+                    message={t.practice.invalidRequest || "Invalid Request"}
+                    action={<Button variant="outline" onClick={() => router.push('/notebooks')}>{t.common?.back || 'Back'}</Button>}
+                />
+            </PencilPageShell>
+        );
     }
 
     return (
-        <div className="max-w-3xl mx-auto space-y-8">
-            <div className="flex justify-between items-center mb-4">
+        <PencilPageShell title={t.practice.title} subtitle={t.practice.subtitle}>
+            <PencilSectionCard>
+            <div className="mb-4 flex items-center justify-between">
                 <Button variant="ghost" onClick={() => router.back()}>
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     {t.common?.back || "返回"}
@@ -142,6 +154,9 @@ function PracticeContent() {
                     </Button>
                 </Link>
             </div>
+            </PencilSectionCard>
+
+            <PencilSectionCard>
             <div className="text-center space-y-4">
                 <h1 className="text-3xl font-bold">{t.practice.title}</h1>
                 <p className="text-muted-foreground">
@@ -149,10 +164,7 @@ function PracticeContent() {
                 </p>
 
                 {error && (
-                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative" role="alert">
-                        <strong className="font-bold">{t.common?.error || "Error"}: </strong>
-                        <span className="block whitespace-pre-wrap"> {error}</span>
-                    </div>
+                    <PencilErrorState title={t.common?.error || "Error"} message={error} />
                 )}
 
                 {!question && (
@@ -196,6 +208,7 @@ function PracticeContent() {
                     </div>
                 )}
             </div>
+            </PencilSectionCard>
 
             {question && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -346,13 +359,13 @@ function PracticeContent() {
                     )}
                 </div>
             )}
-        </div>
+        </PencilPageShell>
     );
 }
 
 export default function PracticePage() {
     return (
-        <main className="min-h-screen p-8 bg-background">
+        <main className="min-h-screen bg-background">
             <Suspense fallback={
                 <div className="flex justify-center p-8">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />

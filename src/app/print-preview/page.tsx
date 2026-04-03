@@ -9,6 +9,9 @@ import { apiClient } from "@/lib/api-client";
 import { ErrorItem, PaginatedResponse } from "@/types/api";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { PRINT_PREVIEW_PAGE_SIZE } from "@/lib/constants/pagination";
+import { PencilPageShell } from "@/components/pencil/pencil-page-shell";
+import { PencilSectionCard } from "@/components/pencil/pencil-section-card";
+import { PencilEmptyState } from "@/components/pencil/pencil-empty-state";
 
 function PrintPreviewContent() {
     const searchParams = useSearchParams();
@@ -51,9 +54,9 @@ function PrintPreviewContent() {
     }
 
     return (
-        <>
-            {/* Print Controls - Hidden when printing */}
-            <div className="print:hidden sticky top-0 z-10 bg-background border-b p-3 sm:p-4 shadow-sm">
+        <PencilPageShell title={t.printPreview?.title || 'Print Preview'} subtitle={`${items.length} ${t.notebooks?.items || 'items'}`} showBottomNav={false}>
+            <PencilSectionCard className="print:hidden sticky top-0 z-10">
+            <div className="bg-background p-3 sm:p-4">
                 <div className="max-w-6xl mx-auto space-y-3">
                     {/* Header Row */}
                     <div className="flex items-center gap-3">
@@ -123,9 +126,9 @@ function PrintPreviewContent() {
                     </div>
                 </div>
             </div>
+            </PencilSectionCard>
 
-            {/* Print Content */}
-            <div className="max-w-4xl mx-auto p-8 print:p-0">
+            <PencilSectionCard className="max-w-4xl mx-auto print:p-0">
                 {items.map((item, index) => {
                     // 优先使用 tags 关联，回退到 knowledgePoints
                     let tags: string[] = [];
@@ -223,12 +226,10 @@ function PrintPreviewContent() {
                 })}
 
                 {items.length === 0 && (
-                    <div className="text-center py-12 text-muted-foreground">
-                        {t.printPreview?.noItems || 'No matching error items'}
-                    </div>
+                    <PencilEmptyState title={t.printPreview?.noItems || 'No matching error items'} />
                 )}
-            </div>
-        </>
+            </PencilSectionCard>
+        </PencilPageShell>
     );
 }
 
