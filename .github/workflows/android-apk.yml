@@ -11,6 +11,15 @@ on:
         options:
           - debug
           - release
+      target_abi:
+        description: Target ABI for smaller debug APK
+        required: true
+        default: arm64-v8a
+        type: choice
+        options:
+          - arm64-v8a
+          - armeabi-v7a
+          - x86_64
       attach_to_release:
         description: Attach APK to GitHub Release (tag builds always attach)
         required: false
@@ -32,6 +41,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       REQUESTED_VARIANT: ${{ github.event_name == 'push' && 'release' || inputs.build_variant }}
+      TARGET_ABI: ${{ github.event_name == 'push' && 'arm64-v8a' || inputs.target_abi }}
 
     steps:
       - name: Checkout repository
@@ -106,6 +116,24 @@ jobs:
       - name: Sync Capacitor Android assets
         run: npx cap sync android
 
+      - name: Apply ABI filter for smaller debug APK
+        if: env.REQUESTED_VARIANT == 'debug'
+        run: |
+          if [ -f "android/app/build.gradle" ]; then
+            if ! grep -q "abiFilters" android/app/build.gradle; then
+              cat >> android/app/build.gradle <<EOF
+
+android {
+    defaultConfig {
+        ndk {
+            abiFilters '${TARGET_ABI}'
+        }
+    }
+}
+EOF
+            fi
+          fi
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
@@ -174,7 +202,12 @@ jobs:
         id: resolve_apk
         run: |
           if [ "${REQUESTED_VARIANT}" = "debug" ]; then
-            APK_PATH="android/app/build/outputs/apk/debug/app-debug.apk"
+            ABI_APK="android/app/build/outputs/apk/debug/app-${TARGET_ABI}-debug.apk"
+            if [ -f "$ABI_APK" ]; then
+              APK_PATH="$ABI_APK"
+            else
+              APK_PATH="android/app/build/outputs/apk/debug/app-debug.apk"
+            fi
           elif [ "${release_signing}" = "true" ] && [ -f "android/app/build/outputs/apk/release/app-release-signed.apk" ]; then
             APK_PATH="android/app/build/outputs/apk/release/app-release-signed.apk"
           elif [ -f "android/app/build/outputs/apk/release/app-release.apk" ]; then
