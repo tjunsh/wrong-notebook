@@ -1,0 +1,146 @@
+name: Android APK Small
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '22'
+  JAVA_VERSION: '21'
+  TARGET_ABI: 'arm64-v8a'
+
+jobs:
+  build-small-debug-apk:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web assets (best effort)
+        continue-on-error: true
+        run: npm run build -- --webpack
+
+      - name: Ensure fallback web shell for Capacitor
+        run: |
+          mkdir -p .next
+          if [ ! -f ".next/index.html" ]; then
+            cat > .next/index.html <<'EOF'
+          <!doctype html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <title>Wrong Notebook</title>
+          </head>
+          <body>
+            <div id="root"></div>
+            <script>
+              window.location.replace('https://wrong-notebook.tjunsh.cn/');
+            </script>
+          </body>
+          </html>
+          EOF
+          fi
+
+      - name: Ensure Capacitor dependencies
+        run: npm install @capacitor/core @capacitor/cli @capacitor/android --no-save
+
+      - name: Ensure Capacitor config exists
+        run: |
+          if [ ! -f "capacitor.config.ts" ] && [ ! -f "capacitor.config.json" ]; then
+            cat > capacitor.config.ts <<'EOF'
+          import type { CapacitorConfig } from '@capacitor/cli'
+
+          const config: CapacitorConfig = {
+            appId: 'com.tjunsh.wrongnotebook',
+            appName: 'Wrong Notebook',
+            webDir: '.next',
+          }
+
+          export default config
+          EOF
+          fi
+
+      - name: Generate Android project when missing
+        run: |
+          if [ ! -d "android" ] || [ ! -f "android/gradlew" ]; then
+            npx cap add android
+          fi
+
+      - name: Sync Capacitor Android assets
+        run: npx cap sync android
+
+      - name: Apply arm64 ABI filter
+        run: |
+          if [ -f "android/app/build.gradle" ] && ! grep -q "abiFilters" android/app/build.gradle; then
+            cat >> android/app/build.gradle <<EOF
+
+android {
+    defaultConfig {
+        ndk {
+            abiFilters '${TARGET_ABI}'
+        }
+    }
+}
+EOF
+          fi
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Ensure gradlew is executable
+        run: chmod +x android/gradlew
+
+      - name: Build debug APK
+        run: |
+          cd android
+          ./gradlew --no-daemon clean assembleDebug
+
+      - name: Resolve arm64 debug APK path
+        id: resolve_apk
+        run: |
+          ABI_APK="android/app/build/outputs/apk/debug/app-${TARGET_ABI}-debug.apk"
+          if [ -f "$ABI_APK" ]; then
+            APK_PATH="$ABI_APK"
+          else
+            APK_PATH="android/app/build/outputs/apk/debug/app-debug.apk"
+          fi
+          if [ ! -f "$APK_PATH" ]; then
+            echo "::error::Expected APK file not found: $APK_PATH"
+            exit 1
+          fi
+          echo "apk_path=$APK_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare versioned APK filename
+        id: versioned_name
+        run: |
+          TS=$(date -u +"%Y%m%d-%H%M%S")
+          SHORT_SHA="${GITHUB_SHA:0:7}"
+          TARGET_NAME="wrong-notebook-debug-small-arm64-run${GITHUB_RUN_NUMBER}-${TS}-${SHORT_SHA}.apk"
+          cp "${{ steps.resolve_apk.outputs.apk_path }}" "android/${TARGET_NAME}"
+          echo "apk_versioned_path=android/${TARGET_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload small debug APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk-small-arm64-run${{ github.run_number }}
+          path: ${{ steps.versioned_name.outputs.apk_versioned_path }}
+          retention-days: 14
