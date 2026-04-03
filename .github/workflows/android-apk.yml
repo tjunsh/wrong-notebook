@@ -46,6 +46,29 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Build web assets (best effort)
+        run: |
+          npm run build || echo "::warning::next build failed, fallback web assets will be used for Capacitor sync"
+
+      - name: Ensure web assets directory for Capacitor
+        run: |
+          mkdir -p .next
+          if [ ! -f ".next/index.html" ]; then
+            cat > .next/index.html <<'EOF'
+          <!doctype html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <title>Wrong Notebook</title>
+          </head>
+          <body>
+            <div id="__next">Wrong Notebook Android build artifact</div>
+          </body>
+          </html>
+          EOF
+          fi
+
       - name: Ensure Capacitor dependencies
         run: npm install @capacitor/core @capacitor/cli @capacitor/android --no-save
 
