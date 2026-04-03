@@ -167,18 +167,29 @@ jobs:
           fi
           echo "apk_path=$APK_PATH" >> "$GITHUB_OUTPUT"
 
+      - name: Prepare versioned APK filename
+        id: versioned_name
+        run: |
+          TS=$(date -u +"%Y%m%d-%H%M%S")
+          SHORT_SHA="${GITHUB_SHA:0:7}"
+          VARIANT="${REQUESTED_VARIANT}"
+          TARGET_NAME="wrong-notebook-${VARIANT}-run${GITHUB_RUN_NUMBER}-${TS}-${SHORT_SHA}.apk"
+          cp "${{ steps.resolve_apk.outputs.apk_path }}" "android/${TARGET_NAME}"
+          echo "apk_name=${TARGET_NAME}" >> "$GITHUB_OUTPUT"
+          echo "apk_versioned_path=android/${TARGET_NAME}" >> "$GITHUB_OUTPUT"
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: android-apk-${{ env.REQUESTED_VARIANT }}
-          path: ${{ steps.resolve_apk.outputs.apk_path }}
+          name: android-apk-${{ env.REQUESTED_VARIANT }}-run${{ github.run_number }}
+          path: ${{ steps.versioned_name.outputs.apk_versioned_path }}
           retention-days: 14
 
       - name: Attach APK to GitHub Release (tag)
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ steps.resolve_apk.outputs.apk_path }}
+          files: ${{ steps.versioned_name.outputs.apk_versioned_path }}
 
       - name: Attach APK to latest GitHub Release (manual)
         if: github.event_name == 'workflow_dispatch' && inputs.attach_to_release == true
@@ -190,4 +201,4 @@ jobs:
             echo "::error::No existing release found to upload manual artifact."
             exit 1
           fi
-          gh release upload "$TAG" "${{ steps.resolve_apk.outputs.apk_path }}" --clobber
+          gh release upload "$TAG" "${{ steps.versioned_name.outputs.apk_versioned_path }}" --clobber
