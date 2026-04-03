@@ -1,8 +1,8 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { PencilStatusChip, type PencilStatus } from "@/components/pencil/pencil-status-chip";
 
 export type QueueStatus = 'pending' | 'processing' | 'success' | 'failed'
 
@@ -26,13 +26,6 @@ export function mapAiStatusLabel(status: QueueStatus): string {
   if (status === 'processing') return '处理中'
   if (status === 'success') return '已成功'
   return '失败'
-}
-
-function statusPillClassName(status: QueueStatus): string {
-  if (status === 'failed') return 'bg-red-100 text-red-700 border-red-200'
-  if (status === 'processing') return 'bg-blue-100 text-blue-700 border-blue-200'
-  if (status === 'success') return 'bg-green-100 text-green-700 border-green-200'
-  return 'bg-amber-100 text-amber-700 border-amber-200'
 }
 
 interface QueueStatusPanelProps {
@@ -100,7 +93,7 @@ export function QueueStatusPanel({ tasks, paused, onRetryAll, onTogglePause, lab
                 <p className="truncate text-slate-700">{task.errorItemId}</p>
                 {task.lastError ? <p className="truncate text-xs text-slate-400">{task.lastError}</p> : null}
               </div>
-              <Badge variant="outline" className={statusPillClassName(task.status)}>{mapAiStatusLabel(task.status)}</Badge>
+              <PencilStatusChip status={task.status as PencilStatus} />
             </div>
           ))
         )}

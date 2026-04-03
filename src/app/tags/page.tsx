@@ -13,6 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiClient } from "@/lib/api-client";
 import { TagStats, TagStatsResponse } from "@/types/api";
+import { PencilPageShell } from "@/components/pencil/pencil-page-shell";
+import { PencilSectionCard } from "@/components/pencil/pencil-section-card";
 
 // 标签树节点类型
 interface TagTreeNode {
@@ -453,8 +455,19 @@ export default function TagsPage() {
     };
 
     return (
-        <div className="container mx-auto px-4 py-8 max-w-6xl">
-            <div className="flex items-center gap-4 mb-6">
+        <PencilPageShell
+            title={t.tags?.title || "Tag Management"}
+            subtitle={t.tags?.subtitle || "View and manage knowledge point tags"}
+            actions={
+                <Link href="/">
+                    <Button variant="ghost" size="icon">
+                        <House className="h-5 w-5" />
+                    </Button>
+                </Link>
+            }
+        >
+            <PencilSectionCard>
+            <div className="flex items-center gap-4">
                 <BackButton fallbackUrl="/" />
                 <div>
                     <h1 className="text-3xl font-bold">{t.tags?.title || "Tag Management"}</h1>
@@ -462,15 +475,10 @@ export default function TagsPage() {
                         {t.tags?.subtitle || "View and manage knowledge point tags"}
                     </p>
                 </div>
-                <div className="ml-auto flex items-center">
-                    <Link href="/">
-                        <Button variant="ghost" size="icon">
-                            <House className="h-5 w-5" />
-                        </Button>
-                    </Link>
-                </div>
             </div>
+            </PencilSectionCard>
 
+            <PencilSectionCard>
             <Tabs defaultValue="standard" className="w-full">
                 <TabsList className="grid w-full grid-cols-3 mb-6">
                     <TabsTrigger value="standard">{t.tags?.tabs?.standard || "Standard Tags"}</TabsTrigger>
@@ -482,6 +490,7 @@ export default function TagsPage() {
                 <TabsContent value="custom">{renderCustomTags()}</TabsContent>
                 <TabsContent value="stats">{renderStats()}</TabsContent>
             </Tabs>
-        </div>
+            </PencilSectionCard>
+        </PencilPageShell>
     );
 }

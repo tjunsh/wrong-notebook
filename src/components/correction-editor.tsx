@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { apiClient } from "@/lib/api-client";
 import { UserProfile, Notebook } from "@/types/api";
 import { inferSubjectFromName } from "@/lib/knowledge-tags";
+import { PencilSectionCard } from "@/components/pencil/pencil-section-card";
 
 interface ParsedQuestionWithSubject extends ParsedQuestion {
     subjectId?: string;
@@ -162,15 +163,16 @@ export function CorrectionEditor({ initialData, onSave, onCancel, imagePreview, 
                 </div>
             </div>
 
+            <PencilSectionCard>
             <div className="grid gap-6 lg:grid-cols-2">
                 {/* 左侧：编辑区 */}
                 <div className="space-y-6">
                     {imagePreview && (
-                        <Card>
+                        <PencilSectionCard>
                             <CardContent className="p-4">
                                 <img src={imagePreview} alt="Original" className="w-full rounded-md" />
                             </CardContent>
-                        </Card>
+                        </PencilSectionCard>
                     )}
 
                     <div className="space-y-2">
@@ -278,34 +280,35 @@ export function CorrectionEditor({ initialData, onSave, onCancel, imagePreview, 
 
                 {/* 右侧：预览区 */}
                 <div className="space-y-6">
-                    <Card>
+                    <PencilSectionCard>
                         <CardHeader>
                             <CardTitle>{t.editor.preview?.question || "Question Preview"}</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <MarkdownRenderer content={data.questionText} />
                         </CardContent>
-                    </Card>
+                    </PencilSectionCard>
 
-                    <Card>
+                    <PencilSectionCard>
                         <CardHeader>
                             <CardTitle>{t.editor.preview?.answer || "Answer Preview"}</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <MarkdownRenderer content={data.answerText} />
                         </CardContent>
-                    </Card>
+                    </PencilSectionCard>
 
-                    <Card>
+                    <PencilSectionCard>
                         <CardHeader>
                             <CardTitle>{t.editor.preview?.analysis || "Analysis Preview"}</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <MarkdownRenderer content={data.analysis} />
                         </CardContent>
-                    </Card>
+                    </PencilSectionCard>
                 </div>
             </div>
+            </PencilSectionCard>
         </div>
     );
 }

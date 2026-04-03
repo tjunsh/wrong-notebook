@@ -10,6 +10,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
 import { apiClient } from "@/lib/api-client";
 import { RegisterRequest } from "@/types/api";
+import { PencilPageShell } from "@/components/pencil/pencil-page-shell";
+import { PencilSectionCard } from "@/components/pencil/pencil-section-card";
 
 export default function RegisterPage() {
     const router = useRouter();
@@ -80,16 +82,19 @@ export default function RegisterPage() {
     // 加载中状态
     if (allowRegistration === null) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+            <PencilPageShell title={t.auth?.register?.title || 'Create an Account'}>
+                <PencilSectionCard className="mx-auto w-full max-w-md">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
+                </PencilSectionCard>
+            </PencilPageShell>
         );
     }
 
     // 注册已禁用
     if (allowRegistration === false) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+            <PencilPageShell title={t.auth?.register?.disabled || 'Registration Disabled'}>
+                <PencilSectionCard className="mx-auto w-full max-w-md">
                 <Card className="w-full max-w-md">
                     <CardHeader>
                         <CardTitle className="text-2xl text-center">
@@ -110,12 +115,14 @@ export default function RegisterPage() {
                         </div>
                     </CardContent>
                 </Card>
-            </div>
+                </PencilSectionCard>
+            </PencilPageShell>
         );
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+        <PencilPageShell title={t.auth?.register?.title || 'Create an Account'}>
+            <PencilSectionCard className="mx-auto w-full max-w-md">
             <Card className="w-full max-w-md">
                 <CardHeader>
                     <CardTitle className="text-2xl text-center">
@@ -264,6 +271,7 @@ export default function RegisterPage() {
                     </form>
                 </CardContent>
             </Card>
-        </div>
+            </PencilSectionCard>
+        </PencilPageShell>
     );
 }

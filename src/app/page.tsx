@@ -17,6 +17,8 @@ import { Upload, BookOpen, Tags, LogOut, BarChart3 } from "lucide-react";
 import { SettingsDialog } from "@/components/settings-dialog";
 import { BroadcastNotification } from "@/components/broadcast-notification";
 import { signOut } from "next-auth/react";
+import { PencilPageShell } from "@/components/pencil/pencil-page-shell";
+import { PencilSectionCard } from "@/components/pencil/pencil-section-card";
 
 import { ProgressFeedback, ProgressStatus } from "@/components/ui/progress-feedback";
 import { frontendLogger } from "@/lib/frontend-logger";
@@ -299,32 +301,36 @@ function HomeContent() {
     };
 
     return (
-        <main className="min-h-screen bg-background">
+        <PencilPageShell
+            title={t.app?.title || "智能错题本"}
+            subtitle={t.app?.subtitle || "AI 驱动的题目分析与智能复习"}
+            actions={
+                <>
+                    <BroadcastNotification />
+                    <SettingsDialog />
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="rounded-full text-muted-foreground hover:text-destructive"
+                        onClick={() => signOut({ callbackUrl: '/login' })}
+                        title={t.app?.logout || 'Logout'}
+                    >
+                        <LogOut className="h-5 w-5" />
+                    </Button>
+                </>
+            }
+        >
             <ProgressFeedback
                 status={analysisStep}
                 progress={progress}
                 message={getProgressMessage()}
             />
 
-            <div className="container mx-auto p-4 space-y-8 pb-20">
-                {/* Header Section */}
-                <div className="flex justify-between items-start gap-4">
-                    <UserWelcome />
+            <PencilSectionCard>
+                <UserWelcome />
+            </PencilSectionCard>
 
-                    <div className="flex items-center gap-2 bg-card p-2 rounded-lg border shadow-sm shrink-0">
-                        <BroadcastNotification />
-                        <SettingsDialog />
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="rounded-full text-muted-foreground hover:text-destructive"
-                            onClick={() => signOut({ callbackUrl: '/login' })}
-                            title={t.app?.logout || 'Logout'}
-                        >
-                            <LogOut className="h-5 w-5" />
-                        </Button>
-                    </div>
-                </div>
+            <PencilSectionCard title={t.app?.uploadNew || 'Upload New'}>
 
                 {/* Action Center */}
                 <div className={initialNotebookId ? "flex justify-center mb-6" : "grid grid-cols-2 md:grid-cols-4 gap-4"}>
@@ -387,6 +393,7 @@ function HomeContent() {
                 {step === "upload" && (
                     <UploadZone onImageSelect={onImageSelect} isAnalyzing={analysisStep !== 'idle'} />
                 )}
+            </PencilSectionCard>
 
                 {croppingImage && (
                     <ImageCropper
@@ -397,7 +404,8 @@ function HomeContent() {
                     />
                 )}
 
-                {step === "review" && parsedData && (
+            {step === "review" && parsedData ? (
+                <PencilSectionCard title={t.editor?.title || 'Review & Correct'}>
                     <CorrectionEditor
                         initialData={parsedData}
                         onSave={handleSave}
@@ -406,10 +414,9 @@ function HomeContent() {
                         initialSubjectId={initialNotebookId || autoSelectedNotebookId || undefined}
                         aiTimeout={aiTimeout}
                     />
-                )}
-
-            </div>
-        </main>
+                </PencilSectionCard>
+            ) : null}
+        </PencilPageShell>
     );
 }
 

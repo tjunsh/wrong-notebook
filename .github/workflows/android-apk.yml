@@ -46,12 +46,33 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Verify Android project exists
+      - name: Ensure Capacitor dependencies
+        run: npm install @capacitor/core @capacitor/cli @capacitor/android --no-save
+
+      - name: Ensure Capacitor config exists
+        run: |
+          if [ ! -f "capacitor.config.ts" ] && [ ! -f "capacitor.config.json" ]; then
+            cat > capacitor.config.ts <<'EOF'
+          import type { CapacitorConfig } from '@capacitor/cli'
+
+          const config: CapacitorConfig = {
+            appId: 'com.tjunsh.wrongnotebook',
+            appName: 'Wrong Notebook',
+            webDir: '.next',
+          }
+
+          export default config
+          EOF
+          fi
+
+      - name: Generate Android project when missing
         run: |
           if [ ! -d "android" ] || [ ! -f "android/gradlew" ]; then
-            echo "::error::Missing android project. Run 'npx cap add android' locally and commit the android/ directory first."
-            exit 1
+            npx cap add android
           fi
+
+      - name: Sync Capacitor Android assets
+        run: npx cap sync android
 
       - name: Setup Java
         uses: actions/setup-java@v4

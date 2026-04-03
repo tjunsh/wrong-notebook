@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { PencilPageShell } from "@/components/pencil/pencil-page-shell";
+import { PencilSectionCard } from "@/components/pencil/pencil-section-card";
 
 export default function LoginPage() {
     const router = useRouter();
@@ -43,8 +45,9 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-            <Card className="w-full max-w-md">
+        <PencilPageShell title={t.auth?.login?.title || 'Login'}>
+            <PencilSectionCard className="mx-auto w-full max-w-md">
+            <Card className="w-full border-0 shadow-none">
                 <CardHeader>
                     <CardTitle className="text-2xl text-center">
                         {t.auth?.login?.title || 'Login'}
@@ -95,6 +98,7 @@ export default function LoginPage() {
                     </form>
                 </CardContent>
             </Card>
-        </div>
+            </PencilSectionCard>
+        </PencilPageShell>
     );
 }

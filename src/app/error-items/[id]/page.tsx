@@ -17,6 +17,9 @@ import { apiClient } from "@/lib/api-client";
 import { UserProfile } from "@/types/api";
 import { inferSubjectFromName } from "@/lib/knowledge-tags";
 import { createOfflineErrorItemServiceFromWindow } from "@/offline/error-items/offline-service-factory";
+import { PencilStatusChip, type PencilStatus } from "@/components/pencil/pencil-status-chip";
+import { PencilPageShell } from "@/components/pencil/pencil-page-shell";
+import { PencilSectionCard } from "@/components/pencil/pencil-section-card";
 import Image from "next/image";
 
 interface KnowledgeTag {
@@ -41,6 +44,7 @@ interface ErrorItemDetail {
     } | null;
     gradeSemester?: string | null;
     paperLevel?: string | null;
+    aiStatus?: PencilStatus | null;
 }
 
 export default function ErrorDetailPage() {
@@ -345,9 +349,9 @@ export default function ErrorDetailPage() {
     }
 
     return (
-        <main className="min-h-screen bg-background">
-            <div className="container mx-auto p-4 space-y-6 pb-20">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <PencilPageShell title={t.detail.title}>
+            <PencilSectionCard>
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div className="flex items-center gap-4">
                         <Link href={item.subjectId ? `/notebooks/${item.subjectId}` : "/notebooks"}>
                             <Button variant="ghost" size="icon">
@@ -355,6 +359,7 @@ export default function ErrorDetailPage() {
                             </Button>
                         </Link>
                         <h1 className="text-2xl font-bold">{t.detail.title}</h1>
+                        {item.aiStatus ? <PencilStatusChip status={item.aiStatus} /> : null}
                     </div>
 
                     <div className="flex gap-2">
@@ -393,8 +398,9 @@ export default function ErrorDetailPage() {
                         </Button>
                     </div>
                 </div>
+            </PencilSectionCard>
 
-                <div className="grid gap-6 lg:grid-cols-2">
+            <div className="grid gap-6 lg:grid-cols-2">
                     {/* Left Column: Question & Image */}
                     <div className="space-y-6 min-w-0">
                         <Card>
@@ -739,9 +745,7 @@ export default function ErrorDetailPage() {
 
                     </div>
                 </div>
-            </div>
 
-            {/* Image Viewer Modal */}
             {
                 isImageViewerOpen && item?.originalImageUrl && (
                     <div
@@ -756,7 +760,7 @@ export default function ErrorDetailPage() {
                                 {t.detail?.close || '✕ Close'}
                             </button>
                             <Image
-                                src={item.originalImageUrl}
+                                src={item?.originalImageUrl || ""}
                                 alt="Full size"
                                 width={1600}
                                 height={1200}
@@ -770,6 +774,6 @@ export default function ErrorDetailPage() {
                     </div>
                 )
             }
-        </main >
+        </PencilPageShell>
     );
 }

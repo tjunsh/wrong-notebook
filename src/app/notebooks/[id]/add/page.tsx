@@ -16,6 +16,8 @@ import { ArrowLeft } from "lucide-react";
 import { ProgressFeedback, ProgressStatus } from "@/components/ui/progress-feedback";
 import { frontendLogger } from "@/lib/frontend-logger";
 import { createOfflineErrorItemServiceFromWindow } from "@/offline/error-items/offline-service-factory";
+import { PencilPageShell } from "@/components/pencil/pencil-page-shell";
+import { PencilSectionCard } from "@/components/pencil/pencil-section-card";
 
 type AnalyzeError = {
     message?: string;
@@ -308,15 +310,14 @@ export default function AddErrorPage() {
     }
 
     return (
-        <main className="min-h-screen bg-background">
+        <PencilPageShell title={t.app.addError} subtitle={notebook.name}>
             <ProgressFeedback
                 status={analysisStep}
                 progress={progress}
                 message={getProgressMessage()}
             />
 
-            <div className="container mx-auto p-4 space-y-8 pb-20">
-                {/* Header Section */}
+            <PencilSectionCard>
                 <div className="flex items-center gap-4">
                     <Link href={`/notebooks/${notebookId}`}>
                         <Button variant="ghost" size="icon">
@@ -325,13 +326,16 @@ export default function AddErrorPage() {
                     </Link>
                     <h1 className="text-2xl font-bold">{t.app.addError}</h1>
                 </div>
+            </PencilSectionCard>
 
-                {/* Main Content */}
+            <PencilSectionCard>
                 {step === "upload" && (
                     <UploadZone onImageSelect={onImageSelect} isAnalyzing={analysisStep !== 'idle'} />
                 )}
+            </PencilSectionCard>
 
-                {step === "review" && parsedData && currentImage && (
+            {step === "review" && parsedData && currentImage ? (
+                <PencilSectionCard title={t.editor?.title || 'Review & Correct'}>
                     <CorrectionEditor
                         initialData={parsedData}
                         imagePreview={currentImage}
@@ -340,8 +344,8 @@ export default function AddErrorPage() {
                         initialSubjectId={notebookId}
                         aiTimeout={aiTimeout}
                     />
-                )}
-            </div>
+                </PencilSectionCard>
+            ) : null}
 
             <ImageCropper
                 imageSrc={croppingImage || ""}
@@ -349,6 +353,6 @@ export default function AddErrorPage() {
                 onClose={() => setIsCropperOpen(false)}
                 onCropComplete={handleCropComplete}
             />
-        </main>
+        </PencilPageShell>
     );
 }

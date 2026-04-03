@@ -16,6 +16,8 @@ import { Notebook } from "@/types/api";
 import { apiClient } from "@/lib/api-client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { offlineRuntimeState } from "@/offline/runtime/offline-runtime-state";
+import { PencilPageShell } from "@/components/pencil/pencil-page-shell";
+import { PencilSectionCard } from "@/components/pencil/pencil-section-card";
 
 export default function NotebookDetailPage() {
     const params = useParams();
@@ -138,35 +140,37 @@ export default function NotebookDetailPage() {
     if (!notebook) return null;
 
     return (
-        <main className="min-h-screen p-4 md:p-8 bg-background">
-            <div className="max-w-6xl mx-auto space-y-6 md:space-y-8">
-                <div className="flex items-start gap-4">
-                    <BackButton fallbackUrl="/notebooks" className="shrink-0" />
-                    <div className="flex-1 min-w-0 space-y-1">
-                        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight truncate">{notebook.name}</h1>
-                        <p className="text-muted-foreground text-sm sm:text-base">
-                            {(t.notebooks?.totalErrors || "Total {count} errors").replace("{count}", (notebook._count?.errorItems || 0).toString())}
-                        </p>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                        <Link href={`/notebooks/${notebook.id}/add`}>
-                            <Button size="sm" className="hidden sm:flex">
-                                <Plus className="mr-2 h-4 w-4" />
-                                {t.notebooks?.addError || "Add Error"}
-                            </Button>
-                            <Button size="icon" className="sm:hidden">
-                                <Plus className="h-4 w-4" />
-                            </Button>
-                        </Link>
-                        <Link href="/">
-                            <Button variant="ghost" size="icon">
-                                <House className="h-5 w-5" />
-                            </Button>
-                        </Link>
-                    </div>
-                </div>
+        <PencilPageShell
+            title={notebook.name}
+            subtitle={(t.notebooks?.totalErrors || "Total {count} errors").replace("{count}", (notebook._count?.errorItems || 0).toString())}
+            actions={
+                <>
+                    <Link href={`/notebooks/${notebook.id}/add`}>
+                        <Button size="sm" className="hidden sm:flex">
+                            <Plus className="mr-2 h-4 w-4" />
+                            {t.notebooks?.addError || "Add Error"}
+                        </Button>
+                        <Button size="icon" className="sm:hidden">
+                            <Plus className="h-4 w-4" />
+                        </Button>
+                    </Link>
+                    <Link href="/">
+                        <Button variant="ghost" size="icon">
+                            <House className="h-5 w-5" />
+                        </Button>
+                    </Link>
+                </>
+            }
+        >
+            <PencilSectionCard>
+                <BackButton fallbackUrl="/notebooks" className="shrink-0" />
+            </PencilSectionCard>
 
+            <PencilSectionCard>
                 <ErrorList subjectId={notebook.id} subjectName={notebook.name} />
+            </PencilSectionCard>
+
+            <PencilSectionCard title={notebookLabels.queueTitle || "AI 队列状态"}>
                 <QueueStatusPanel
                     tasks={queueTasks.map((task) => ({
                         id: task.id,
@@ -204,7 +208,7 @@ export default function NotebookDetailPage() {
                         queueFallbackNoLocalHint: notebookLabels.queueFallbackNoLocalHint || "设置同步失败且未找到本地配置，请先在设置中配置 AI。",
                     }}
                 />
-            </div>
-        </main>
+            </PencilSectionCard>
+        </PencilPageShell>
     );
 }

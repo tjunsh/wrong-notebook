@@ -8,13 +8,26 @@ import { Button } from "@/components/ui/button";
 import { BackButton } from "@/components/ui/back-button";
 import { BarChart3, TrendingUp, Activity, House } from "lucide-react";
 import Link from "next/link";
+import { PencilPageShell } from "@/components/pencil/pencil-page-shell";
+import { PencilSectionCard } from "@/components/pencil/pencil-section-card";
 
 export default function StatsPage() {
     const { t } = useLanguage();
 
     return (
-        <div className="container mx-auto px-4 py-8 max-w-6xl">
-            <div className="flex items-center gap-4 mb-6">
+        <PencilPageShell
+            title={t.stats?.headerTitle || "Statistics Center"}
+            subtitle={t.stats?.headerDesc || "View your learning progress and data analysis"}
+            actions={
+                <Link href="/">
+                    <Button variant="ghost" size="icon">
+                        <House className="h-5 w-5" />
+                    </Button>
+                </Link>
+            }
+        >
+            <PencilSectionCard>
+            <div className="flex items-center gap-4">
                 <BackButton fallbackUrl="/" />
                 <div>
                     <h1 className="text-3xl font-bold flex items-center gap-2">
@@ -25,15 +38,10 @@ export default function StatsPage() {
                         {t.stats?.headerDesc || "View your learning progress and data analysis"}
                     </p>
                 </div>
-                <div className="ml-auto flex items-center">
-                    <Link href="/">
-                        <Button variant="ghost" size="icon">
-                            <House className="h-5 w-5" />
-                        </Button>
-                    </Link>
-                </div>
             </div>
+            </PencilSectionCard>
 
+            <PencilSectionCard>
             <Tabs defaultValue="wrong" className="w-full">
                 <TabsList className="grid w-full grid-cols-2 mb-6">
                     <TabsTrigger value="wrong" className="flex items-center gap-2">
@@ -53,6 +61,7 @@ export default function StatsPage() {
                     <PracticeStats />
                 </TabsContent>
             </Tabs>
-        </div>
+            </PencilSectionCard>
+        </PencilPageShell>
     );
 }

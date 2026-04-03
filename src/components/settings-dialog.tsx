@@ -30,6 +30,7 @@ import { frontendLogger } from "@/lib/frontend-logger";
 import { AppConfig, UserProfile, UpdateUserProfileRequest, OpenAIInstance } from "@/types/api";
 import { ModelSelector } from "@/components/ui/model-selector";
 import { PromptSettings } from "@/components/settings/prompt-settings";
+import { PencilSectionCard } from "@/components/pencil/pencil-section-card";
 
 import { MessageSquareText, Info, ExternalLink, Github, ScrollText } from "lucide-react";
 import packageJson from "../../package.json";
@@ -518,6 +519,8 @@ export function SettingsDialog() {
                         {t.settings?.desc || 'Manage your preferences and data.'}
                     </DialogDescription>
                 </DialogHeader>
+
+                <PencilSectionCard>
 
                 <Tabs defaultValue="general" className="w-full">
                     <TabsList className={`grid w-full grid-cols-4 ${(session?.user as any)?.role === 'admin' ? 'sm:grid-cols-7' : 'sm:grid-cols-4'} gap-1 h-auto`}>
@@ -1250,6 +1253,7 @@ export function SettingsDialog() {
                         </div>
                     </TabsContent>
                 </Tabs>
+                </PencilSectionCard>
             </DialogContent>
         </Dialog>
     );

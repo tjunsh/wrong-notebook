@@ -8,6 +8,9 @@ import { Plus, House } from "lucide-react";
 import Link from "next/link";
 import { NotebookCard } from "@/components/notebook-card";
 import { CreateNotebookDialog } from "@/components/create-notebook-dialog";
+import { PencilPageShell } from "@/components/pencil/pencil-page-shell";
+import { PencilSectionCard } from "@/components/pencil/pencil-section-card";
+import { PencilEmptyState } from "@/components/pencil/pencil-empty-state";
 
 import { Notebook } from "@/types/api";
 import { apiClient } from "@/lib/api-client";
@@ -79,44 +82,45 @@ export default function NotebooksPage() {
     }
 
     return (
-        <main className="min-h-screen p-4 md:p-8 bg-background">
-            <div className="max-w-6xl mx-auto space-y-8">
+        <PencilPageShell
+            title={t.notebooks?.title || "My Notebooks"}
+            subtitle={t.notebooks?.subtitle || "Manage your mistakes by subject"}
+            actions={
+                <>
+                    <Button onClick={() => setDialogOpen(true)} size="sm" className="hidden sm:flex">
+                        <Plus className="mr-2 h-4 w-4" />
+                        {t.notebooks?.create || "New Notebook"}
+                    </Button>
+                    <Button onClick={() => setDialogOpen(true)} size="icon" className="sm:hidden">
+                        <Plus className="h-4 w-4" />
+                    </Button>
+                    <Link href="/">
+                        <Button variant="ghost" size="icon">
+                            <House className="h-5 w-5" />
+                        </Button>
+                    </Link>
+                </>
+            }
+        >
+            <PencilSectionCard>
                 <div className="flex items-start gap-4">
                     <BackButton fallbackUrl="/" />
-                    <div className="flex-1 space-y-1">
-                        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t.notebooks?.title || "My Notebooks"}</h1>
-                        <p className="text-muted-foreground text-sm sm:text-base">
-                            {t.notebooks?.subtitle || "Manage your mistakes by subject"}
-                        </p>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                        <Button onClick={() => setDialogOpen(true)} size="sm" className="hidden sm:flex">
-                            <Plus className="mr-2 h-4 w-4" />
-                            {t.notebooks?.create || "New Notebook"}
-                        </Button>
-                        <Button onClick={() => setDialogOpen(true)} size="icon" className="sm:hidden">
-                            <Plus className="h-4 w-4" />
-                        </Button>
-                        <Link href="/">
-                            <Button variant="ghost" size="icon">
-                                <House className="h-5 w-5" />
-                            </Button>
-                        </Link>
-                    </div>
                 </div>
+            </PencilSectionCard>
 
+            <PencilSectionCard>
                 {notebooks.length === 0 ? (
-                    <div className="text-center py-12 border-2 border-dashed rounded-lg">
-                        <p className="text-muted-foreground mb-4">
-                            {t.notebooks?.empty || "No notebooks yet."}
-                        </p>
-                        <Button onClick={() => setDialogOpen(true)}>
-                            <Plus className="mr-2 h-4 w-4" />
-                            {t.notebooks?.createFirst || "Create Notebook"}
-                        </Button>
-                    </div>
+                    <PencilEmptyState
+                        title={t.notebooks?.empty || "No notebooks yet."}
+                        action={
+                            <Button onClick={() => setDialogOpen(true)}>
+                                <Plus className="mr-2 h-4 w-4" />
+                                {t.notebooks?.createFirst || "Create Notebook"}
+                            </Button>
+                        }
+                    />
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                         {notebooks.map((notebook) => (
                             <NotebookCard
                                 key={notebook.id}
@@ -130,6 +134,7 @@ export default function NotebooksPage() {
                         ))}
                     </div>
                 )}
+            </PencilSectionCard>
 
                 <CreateNotebookDialog
                     key={t.common.loading} // Force re-render when language changes
@@ -137,7 +142,6 @@ export default function NotebooksPage() {
                     onOpenChange={setDialogOpen}
                     onCreate={handleCreate}
                 />
-            </div >
-        </main >
+        </PencilPageShell>
     );
 }
