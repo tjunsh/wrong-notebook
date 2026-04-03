@@ -26,26 +26,16 @@ jobs:
         run: npm ci
 
       - name: Build web (best effort)
-        continue-on-error: true
         run: npm run build -- --webpack
 
-      - name: Ensure local web shell
+      - name: Export static web assets
+        run: npx next export
+
+      - name: Ensure exported web assets exist
         run: |
-          mkdir -p .next
-          if [ ! -f ".next/index.html" ]; then
-            cat > .next/index.html <<'EOF'
-          <!doctype html>
-          <html lang="en">
-          <head>
-            <meta charset="UTF-8" />
-            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-            <title>Wrong Notebook Local</title>
-          </head>
-          <body>
-            <div id="root">Wrong Notebook Mobile Local Build</div>
-          </body>
-          </html>
-          EOF
+          if [ ! -f "out/index.html" ]; then
+            echo "::error::Static export output out/index.html not found."
+            exit 1
           fi
 
       - name: Capacitor deps
@@ -60,7 +50,7 @@ jobs:
           const config: CapacitorConfig = {
             appId: 'com.tjunsh.wrongnotebook',
             appName: 'Wrong Notebook',
-            webDir: '.next',
+            webDir: 'out',
           }
 
           export default config
