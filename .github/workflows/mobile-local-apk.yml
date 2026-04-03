@@ -1,36 +1,35 @@
-name: Android APK Mobile Local
+name: Mobile Local APK
 
 on:
-  workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: ["main"]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  build-mobile-local-apk:
+  build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
 
-      - name: Install dependencies
+      - name: Install
         run: npm ci
 
-      - name: Build web assets
+      - name: Build web (best effort)
         continue-on-error: true
         run: npm run build -- --webpack
 
-      - name: Prepare local web shell
+      - name: Ensure local web shell
         run: |
           mkdir -p .next
           if [ ! -f ".next/index.html" ]; then
@@ -49,10 +48,10 @@ jobs:
           EOF
           fi
 
-      - name: Ensure Capacitor dependencies
+      - name: Capacitor deps
         run: npm install @capacitor/core @capacitor/cli @capacitor/android --no-save
 
-      - name: Ensure Capacitor config exists
+      - name: Capacitor config
         run: |
           if [ ! -f "capacitor.config.ts" ] && [ ! -f "capacitor.config.json" ]; then
             cat > capacitor.config.ts <<'EOF'
@@ -68,13 +67,13 @@ jobs:
           EOF
           fi
 
-      - name: Generate Android project when missing
+      - name: Ensure android project
         run: |
           if [ ! -d "android" ] || [ ! -f "android/gradlew" ]; then
             npx cap add android
           fi
 
-      - name: Sync Capacitor Android assets
+      - name: Sync android assets
         run: npx cap sync android
 
       - name: Apply arm64 ABI filter
@@ -101,13 +100,13 @@ EOF
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Build debug APK
+      - name: Build debug apk
         run: |
           chmod +x android/gradlew
           cd android
           ./gradlew --no-daemon clean assembleDebug
 
-      - name: Resolve debug APK path
+      - name: Resolve APK
         id: apk
         run: |
           ABI_APK="android/app/build/outputs/apk/debug/app-arm64-v8a-debug.apk"
@@ -124,11 +123,11 @@ EOF
           SHORT_SHA="${GITHUB_SHA:0:7}"
           NAME="wrong-notebook-mobile-local-debug-run${GITHUB_RUN_NUMBER}-${TS}-${SHORT_SHA}.apk"
           cp "$APK_PATH" "android/${NAME}"
-          echo "versioned_path=android/${NAME}" >> "$GITHUB_OUTPUT"
+          echo "artifact_path=android/${NAME}" >> "$GITHUB_OUTPUT"
 
-      - name: Upload APK artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: android-apk-mobile-local-run${{ github.run_number }}
-          path: ${{ steps.apk.outputs.versioned_path }}
+          name: mobile-local-apk-run${{ github.run_number }}
+          path: ${{ steps.apk.outputs.artifact_path }}
           retention-days: 14
