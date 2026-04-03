@@ -25,9 +25,6 @@ on:
         required: false
         default: false
         type: boolean
-  push:
-    tags:
-      - 'v*'
 
 permissions:
   contents: write
@@ -46,13 +43,8 @@ jobs:
 
       - name: Resolve build variant and ABI
         run: |
-          if [ "${{ github.event_name }}" = "push" ]; then
-            echo "REQUESTED_VARIANT=release" >> "$GITHUB_ENV"
-            echo "TARGET_ABI=arm64-v8a" >> "$GITHUB_ENV"
-          else
-            echo "REQUESTED_VARIANT=${{ github.event.inputs.build_variant }}" >> "$GITHUB_ENV"
-            echo "TARGET_ABI=${{ github.event.inputs.target_abi }}" >> "$GITHUB_ENV"
-          fi
+          echo "REQUESTED_VARIANT=${{ github.event.inputs.build_variant || 'debug' }}" >> "$GITHUB_ENV"
+          echo "TARGET_ABI=${{ github.event.inputs.target_abi || 'arm64-v8a' }}" >> "$GITHUB_ENV"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -246,14 +238,8 @@ EOF
           path: ${{ steps.versioned_name.outputs.apk_versioned_path }}
           retention-days: 14
 
-      - name: Attach APK to GitHub Release (tag)
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: ${{ steps.versioned_name.outputs.apk_versioned_path }}
-
       - name: Attach APK to latest GitHub Release (manual)
-        if: github.event_name == 'workflow_dispatch' && inputs.attach_to_release == true
+        if: github.event.inputs.attach_to_release == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
