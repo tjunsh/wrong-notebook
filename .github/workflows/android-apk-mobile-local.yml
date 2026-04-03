@@ -1,0 +1,134 @@
+name: Android APK Mobile Local
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build-mobile-local-apk:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web assets
+        continue-on-error: true
+        run: npm run build -- --webpack
+
+      - name: Prepare local web shell
+        run: |
+          mkdir -p .next
+          if [ ! -f ".next/index.html" ]; then
+            cat > .next/index.html <<'EOF'
+          <!doctype html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <title>Wrong Notebook Local</title>
+          </head>
+          <body>
+            <div id="root">Wrong Notebook Mobile Local Build</div>
+          </body>
+          </html>
+          EOF
+          fi
+
+      - name: Ensure Capacitor dependencies
+        run: npm install @capacitor/core @capacitor/cli @capacitor/android --no-save
+
+      - name: Ensure Capacitor config exists
+        run: |
+          if [ ! -f "capacitor.config.ts" ] && [ ! -f "capacitor.config.json" ]; then
+            cat > capacitor.config.ts <<'EOF'
+          import type { CapacitorConfig } from '@capacitor/cli'
+
+          const config: CapacitorConfig = {
+            appId: 'com.tjunsh.wrongnotebook',
+            appName: 'Wrong Notebook',
+            webDir: '.next',
+          }
+
+          export default config
+          EOF
+          fi
+
+      - name: Generate Android project when missing
+        run: |
+          if [ ! -d "android" ] || [ ! -f "android/gradlew" ]; then
+            npx cap add android
+          fi
+
+      - name: Sync Capacitor Android assets
+        run: npx cap sync android
+
+      - name: Apply arm64 ABI filter
+        run: |
+          if [ -f "android/app/build.gradle" ] && ! grep -q "abiFilters" android/app/build.gradle; then
+            cat >> android/app/build.gradle <<EOF
+
+android {
+    defaultConfig {
+        ndk {
+            abiFilters 'arm64-v8a'
+        }
+    }
+}
+EOF
+          fi
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Build debug APK
+        run: |
+          chmod +x android/gradlew
+          cd android
+          ./gradlew --no-daemon clean assembleDebug
+
+      - name: Resolve debug APK path
+        id: apk
+        run: |
+          ABI_APK="android/app/build/outputs/apk/debug/app-arm64-v8a-debug.apk"
+          if [ -f "$ABI_APK" ]; then
+            APK_PATH="$ABI_APK"
+          else
+            APK_PATH="android/app/build/outputs/apk/debug/app-debug.apk"
+          fi
+          if [ ! -f "$APK_PATH" ]; then
+            echo "::error::APK not found"
+            exit 1
+          fi
+          TS=$(date -u +"%Y%m%d-%H%M%S")
+          SHORT_SHA="${GITHUB_SHA:0:7}"
+          NAME="wrong-notebook-mobile-local-debug-run${GITHUB_RUN_NUMBER}-${TS}-${SHORT_SHA}.apk"
+          cp "$APK_PATH" "android/${NAME}"
+          echo "versioned_path=android/${NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk-mobile-local-run${{ github.run_number }}
+          path: ${{ steps.apk.outputs.versioned_path }}
+          retention-days: 14
