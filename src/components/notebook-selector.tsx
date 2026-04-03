@@ -21,7 +21,6 @@ interface NotebookSelectorProps {
 
 export function NotebookSelector({ value, onChange, className }: NotebookSelectorProps) {
     const [notebooks, setNotebooks] = useState<Notebook[]>([]);
-    const [loading, setLoading] = useState(true);
     const { t } = useLanguage();
 
     useEffect(() => {
@@ -31,8 +30,6 @@ export function NotebookSelector({ value, onChange, className }: NotebookSelecto
                 setNotebooks(data);
             } catch (error) {
                 console.error("Failed to fetch notebooks:", error);
-            } finally {
-                setLoading(false);
             }
         };
 

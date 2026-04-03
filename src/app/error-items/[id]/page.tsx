@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +16,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { apiClient } from "@/lib/api-client";
 import { UserProfile } from "@/types/api";
 import { inferSubjectFromName } from "@/lib/knowledge-tags";
+import { createOfflineErrorItemServiceFromWindow } from "@/offline/error-items/offline-service-factory";
+import Image from "next/image";
 
 interface KnowledgeTag {
     id: string;
@@ -44,7 +46,7 @@ interface ErrorItemDetail {
 export default function ErrorDetailPage() {
     const params = useParams();
     const router = useRouter();
-    const { t, language } = useLanguage();
+    const { t } = useLanguage();
     const [item, setItem] = useState<ErrorItemDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [isEditingNotes, setIsEditingNotes] = useState(false);
@@ -58,6 +60,19 @@ export default function ErrorDetailPage() {
 
     const [educationStage, setEducationStage] = useState<string | undefined>(undefined);
 
+    const fetchItem = useCallback(async (id: string) => {
+        try {
+            const data = await apiClient.get<ErrorItemDetail>(`/api/error-items/${id}`);
+            setItem(data);
+        } catch (error) {
+            console.error(error);
+            alert(t.common?.messages?.loadFailed || 'Failed to load item');
+            router.push("/notebooks");
+        } finally {
+            setLoading(false);
+        }
+    }, [router, t.common?.messages?.loadFailed]);
+
     useEffect(() => {
         // Fetch user info for education stage
         apiClient.get<UserProfile>("/api/user")
@@ -69,22 +84,9 @@ export default function ErrorDetailPage() {
             .catch(err => console.error("Failed to fetch user info:", err));
 
         if (params.id) {
-            fetchItem(params.id as string);
+            void fetchItem(params.id as string);
         }
-    }, [params.id]);
-
-    const fetchItem = async (id: string) => {
-        try {
-            const data = await apiClient.get<ErrorItemDetail>(`/api/error-items/${id}`);
-            setItem(data);
-        } catch (error) {
-            console.error(error);
-            alert(t.common?.messages?.loadFailed || 'Failed to load item');
-            router.push("/notebooks");
-        } finally {
-            setLoading(false);
-        }
-    };
+    }, [fetchItem, params.id]);
 
     const toggleMastery = async () => {
         if (!item) return;
@@ -141,7 +143,7 @@ export default function ErrorDetailPage() {
                 try {
                     const tags = JSON.parse(item.knowledgePoints);
                     setTagsInput(tags);
-                } catch (e) {
+                } catch {
                     setTagsInput([]);
                 }
             } else {
@@ -221,6 +223,14 @@ export default function ErrorDetailPage() {
 
     const saveQuestionHandler = async () => {
         try {
+            const offline = typeof window !== 'undefined' ? createOfflineErrorItemServiceFromWindow() : null;
+            if (offline && item) {
+                await offline.service.updateAndQueueAnalyze({
+                    id: item.id,
+                    ownerProfileId: offline.ownerProfileId,
+                    questionText: questionInput,
+                });
+            }
             await apiClient.put(`/api/error-items/${item?.id}`, { questionText: questionInput });
             setIsEditingQuestion(false);
             if (item) setItem({ ...item, questionText: questionInput });
@@ -246,6 +256,15 @@ export default function ErrorDetailPage() {
 
     const saveAnswerHandler = async () => {
         try {
+            const offline = typeof window !== 'undefined' ? createOfflineErrorItemServiceFromWindow() : null;
+            if (offline && item) {
+                await offline.service.updateAndQueueAnalyze({
+                    id: item.id,
+                    ownerProfileId: offline.ownerProfileId,
+                    answerText: answerInput,
+                    questionText: item.questionText,
+                });
+            }
             await apiClient.put(`/api/error-items/${item?.id}`, { answerText: answerInput });
             setIsEditingAnswer(false);
             if (item) setItem({ ...item, answerText: answerInput });
@@ -271,6 +290,15 @@ export default function ErrorDetailPage() {
 
     const saveAnalysisHandler = async () => {
         try {
+            const offline = typeof window !== 'undefined' ? createOfflineErrorItemServiceFromWindow() : null;
+            if (offline && item) {
+                await offline.service.updateAndQueueAnalyze({
+                    id: item.id,
+                    ownerProfileId: offline.ownerProfileId,
+                    analysisText: analysisInput,
+                    questionText: item.questionText,
+                });
+            }
             await apiClient.put(`/api/error-items/${item?.id}`, { analysis: analysisInput });
             setIsEditingAnalysis(false);
             if (item) setItem({ ...item, analysis: analysisInput });
@@ -311,7 +339,7 @@ export default function ErrorDetailPage() {
         try {
             const parsed = JSON.parse(item.knowledgePoints);
             tags = Array.isArray(parsed) ? parsed : [];
-        } catch (e) {
+        } catch {
             tags = [];
         }
     }
@@ -395,10 +423,12 @@ export default function ErrorDetailPage() {
                                         <p className="text-sm font-medium mb-2 text-muted-foreground">
                                             {t.detail.originalProblem || "Original Problem"}
                                         </p>
-                                        <img
+                                        <Image
                                             src={item.originalImageUrl}
                                             alt={t.detail.originalProblem || "Original Problem"}
-                                            className="w-full rounded-lg border hover:border-primary/50 transition-colors"
+                                            width={1200}
+                                            height={900}
+                                            className="w-full h-auto rounded-lg border hover:border-primary/50 transition-colors"
                                         />
                                         <p className="text-xs text-muted-foreground mt-1 text-center">
                                             💡 {t.detail?.clickToEnlarge || 'Click to enlarge'}
@@ -725,9 +755,11 @@ export default function ErrorDetailPage() {
                             >
                                 {t.detail?.close || '✕ Close'}
                             </button>
-                            <img
+                            <Image
                                 src={item.originalImageUrl}
                                 alt="Full size"
+                                width={1600}
+                                height={1200}
                                 className="max-w-full max-h-[90vh] object-contain rounded-lg"
                                 onClick={(e) => e.stopPropagation()}
                             />

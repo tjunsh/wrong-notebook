@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -19,22 +19,27 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { KnowledgeFilter } from "@/components/knowledge-filter";
 import { ErrorItem, PaginatedResponse } from "@/types/api";
 import { apiClient } from "@/lib/api-client";
 import { cleanMarkdown } from "@/lib/markdown-utils";
 import { Pagination } from "@/components/ui/pagination";
 import { DEFAULT_PAGE_SIZE } from "@/lib/constants/pagination";
+import { mapAiStatusLabel } from "@/components/offline/queue-status-panel";
 
 interface ErrorListProps {
     subjectId?: string;
     subjectName?: string;
 }
 
+interface FilterChange {
+    gradeSemester?: string;
+    chapter?: string;
+    tag?: string;
+}
+
 export function ErrorList({ subjectId, subjectName }: ErrorListProps = {}) {
     const [items, setItems] = useState<ErrorItem[]>([]);
-    const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
     const [masteryFilter, setMasteryFilter] = useState<"all" | "mastered" | "unmastered">("all");
     const [timeFilter, setTimeFilter] = useState<"all" | "week" | "month">("all");
@@ -54,6 +59,14 @@ export function ErrorList({ subjectId, subjectName }: ErrorListProps = {}) {
     const [isDeleting, setIsDeleting] = useState(false);
     const { t } = useLanguage();
     const router = useRouter();
+
+    const getStatusClassName = (status?: string | null) => {
+        if (status === 'success') return 'bg-green-600 hover:bg-green-700 text-white';
+        if (status === 'failed') return 'bg-red-600 hover:bg-red-700 text-white';
+        if (status === 'processing') return 'bg-blue-600 hover:bg-blue-700 text-white';
+        if (status === 'pending') return 'bg-amber-600 hover:bg-amber-700 text-white';
+        return '';
+    };
 
     const handleExportPrint = () => {
         const params = new URLSearchParams();
@@ -79,7 +92,7 @@ export function ErrorList({ subjectId, subjectName }: ErrorListProps = {}) {
         setSelectedTag(selectedTag === tag ? null : tag);
     };
 
-    const handleFilterChange = ({ gradeSemester, chapter, tag }: any) => {
+    const handleFilterChange = ({ gradeSemester, chapter, tag }: FilterChange) => {
         if (gradeSemester !== undefined) setGradeFilter(gradeSemester);
         if (chapter !== undefined) setChapterFilter(chapter);
         // 注意：tag 可能是 undefined（表示清除），需要用 'tag' in obj 来判断是否传入了该参数
@@ -164,33 +177,7 @@ export function ErrorList({ subjectId, subjectName }: ErrorListProps = {}) {
     // 追踪筛选条件是否变化（用于判断是否需要重置页码）
     const prevFiltersRef = useRef({ search, masteryFilter, timeFilter, selectedTag, subjectId, gradeFilter, chapterFilter, paperLevelFilter });
 
-    useEffect(() => {
-        const prevFilters = prevFiltersRef.current;
-        const filtersChanged =
-            prevFilters.search !== search ||
-            prevFilters.masteryFilter !== masteryFilter ||
-            prevFilters.timeFilter !== timeFilter ||
-            prevFilters.selectedTag !== selectedTag ||
-            prevFilters.subjectId !== subjectId ||
-            prevFilters.gradeFilter !== gradeFilter ||
-            prevFilters.chapterFilter !== chapterFilter ||
-            prevFilters.paperLevelFilter !== paperLevelFilter;
-
-        // 更新 ref
-        prevFiltersRef.current = { search, masteryFilter, timeFilter, selectedTag, subjectId, gradeFilter, chapterFilter, paperLevelFilter };
-
-        if (filtersChanged && page !== 1) {
-            // 筛选条件变化且不在第一页，重置到第一页（会再次触发此 effect）
-            setPage(1);
-            return;
-        }
-
-        // 正常请求数据
-        fetchItems();
-    }, [page, search, masteryFilter, timeFilter, selectedTag, subjectId, gradeFilter, chapterFilter, paperLevelFilter]);
-
-    const fetchItems = async () => {
-        setLoading(true);
+    const fetchItems = useCallback(async () => {
         try {
             const params = new URLSearchParams();
             if (subjectId) params.append("subjectId", subjectId);
@@ -217,10 +204,33 @@ export function ErrorList({ subjectId, subjectName }: ErrorListProps = {}) {
             setTotalPages(response.totalPages);
         } catch (error) {
             console.error(error);
-        } finally {
-            setLoading(false);
         }
-    };
+    }, [chapterFilter, gradeFilter, masteryFilter, page, pageSize, paperLevelFilter, search, selectedTag, subjectId, timeFilter]);
+
+    useEffect(() => {
+        const prevFilters = prevFiltersRef.current;
+        const filtersChanged =
+            prevFilters.search !== search ||
+            prevFilters.masteryFilter !== masteryFilter ||
+            prevFilters.timeFilter !== timeFilter ||
+            prevFilters.selectedTag !== selectedTag ||
+            prevFilters.subjectId !== subjectId ||
+            prevFilters.gradeFilter !== gradeFilter ||
+            prevFilters.chapterFilter !== chapterFilter ||
+            prevFilters.paperLevelFilter !== paperLevelFilter;
+
+        // 更新 ref
+        prevFiltersRef.current = { search, masteryFilter, timeFilter, selectedTag, subjectId, gradeFilter, chapterFilter, paperLevelFilter };
+
+        if (filtersChanged && page !== 1) {
+            // 筛选条件变化且不在第一页，重置到第一页（会再次触发此 effect）
+            setPage(1);
+            return;
+        }
+
+        // 正常请求数据
+        void fetchItems();
+    }, [chapterFilter, fetchItems, gradeFilter, masteryFilter, page, paperLevelFilter, search, selectedTag, subjectId, timeFilter]);
 
     return (
         <div className="space-y-6">
@@ -339,12 +349,12 @@ export function ErrorList({ subjectId, subjectName }: ErrorListProps = {}) {
                 {filteredItems.map((item) => {
                     // 优先使用 tags 关联，回退到 knowledgePoints
                     let tags: string[] = [];
-                    if ((item as any).tags && (item as any).tags.length > 0) {
-                        tags = (item as any).tags.map((t: any) => t.name);
+                    if (item.tags && item.tags.length > 0) {
+                        tags = item.tags.map((tagItem) => tagItem.name);
                     } else {
                         try {
                             tags = JSON.parse(item.knowledgePoints || "[]");
-                        } catch (e) {
+                        } catch {
                             tags = [];
                         }
                     }
@@ -380,6 +390,11 @@ export function ErrorList({ subjectId, subjectName }: ErrorListProps = {}) {
                                                     </span>
                                                 )}
                                             </Badge>
+                                            {item.aiStatus && (
+                                                <Badge variant="outline" className={getStatusClassName(item.aiStatus)}>
+                                                    {mapAiStatusLabel(item.aiStatus as 'pending' | 'processing' | 'success' | 'failed')}
+                                                </Badge>
+                                            )}
                                             <span className="text-xs text-muted-foreground">
                                                 {format(new Date(item.createdAt), "MM/dd")}
                                             </span>

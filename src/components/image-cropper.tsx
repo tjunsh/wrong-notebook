@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import ReactCrop, { Crop, PixelCrop, centerCrop, makeAspectCrop } from "react-image-crop";
+import { useState, useRef } from "react";
+import ReactCrop, { Crop, PixelCrop, centerCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -14,29 +14,8 @@ interface ImageCropperProps {
     onCropComplete: (croppedImageBlob: Blob) => void;
 }
 
-// Helper to center the crop initially
-function centerAspectCrop(
-    mediaWidth: number,
-    mediaHeight: number,
-    aspect: number,
-) {
-    return centerCrop(
-        makeAspectCrop(
-            {
-                unit: '%',
-                width: 90,
-            },
-            aspect,
-            mediaWidth,
-            mediaHeight,
-        ),
-        mediaWidth,
-        mediaHeight,
-    )
-}
-
 export function ImageCropper({ imageSrc, open, onClose, onCropComplete }: ImageCropperProps) {
-    const { t, language } = useLanguage();
+    const { t } = useLanguage();
     const [crop, setCrop] = useState<Crop>();
     const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
     const imgRef = useRef<HTMLImageElement>(null);
@@ -141,6 +120,7 @@ export function ImageCropper({ imageSrc, open, onClose, onCropComplete }: ImageC
                         onComplete={(c) => setCompletedCrop(c)}
                         className="max-h-full"
                     >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                             ref={imgRef}
                             alt="Crop me"

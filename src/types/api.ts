@@ -55,6 +55,7 @@ export interface ErrorItem {
     questionText?: string | null;
     answerText?: string | null;
     analysis?: string | null;
+    aiStatus?: 'pending' | 'processing' | 'success' | 'failed' | string | null;
     knowledgePoints?: string | null;
 
     source?: string | null;

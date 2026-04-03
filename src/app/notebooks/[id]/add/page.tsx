@@ -15,6 +15,15 @@ import { processImageFile } from "@/lib/image-utils";
 import { ArrowLeft } from "lucide-react";
 import { ProgressFeedback, ProgressStatus } from "@/components/ui/progress-feedback";
 import { frontendLogger } from "@/lib/frontend-logger";
+import { createOfflineErrorItemServiceFromWindow } from "@/offline/error-items/offline-service-factory";
+
+type AnalyzeError = {
+    message?: string;
+    status?: number;
+    data?: {
+        message?: string;
+    } | string;
+};
 
 export default function AddErrorPage() {
     const params = useParams();
@@ -171,11 +180,14 @@ export default function AddErrorPage() {
             frontendLogger.info('[AddAnalyze]', 'Analysis completed successfully', {
                 totalDuration
             });
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const normalizedError: AnalyzeError = (typeof error === 'object' && error !== null)
+                ? (error as AnalyzeError)
+                : {};
             const errorDuration = Date.now() - startTime;
             frontendLogger.error('[AddError]', 'Analysis failed', {
                 errorDuration,
-                error: error.message || String(error)
+                error: normalizedError.message || String(error)
             });
 
             // 安全的错误处理逻辑，防止在报错时二次报错
@@ -184,13 +196,16 @@ export default function AddErrorPage() {
                 let errorMessage = t.common.messages?.analysisFailed || 'Analysis failed';
 
                 // ApiError 的结构：error.data.message 包含后端返回的错误类型
-                const backendErrorType = error?.data?.message;
+                const backendErrorType = typeof normalizedError.data === 'object' && normalizedError.data !== null
+                    ? normalizedError.data.message
+                    : undefined;
 
                 if (backendErrorType && typeof backendErrorType === 'string') {
                     // 检查是否是已知的 AI 错误类型
                     // 使用安全访问
                     if (t.errors && typeof t.errors === 'object' && backendErrorType in t.errors) {
-                        const mappedError = (t.errors as any)[backendErrorType];
+                        const errorMap = t.errors as unknown as Record<string, unknown>;
+                        const mappedError = errorMap[backendErrorType];
                         if (typeof mappedError === 'string') {
                             errorMessage = mappedError;
                             frontendLogger.info('[AddError]', `Matched error type: ${backendErrorType}`, {
@@ -204,16 +219,16 @@ export default function AddErrorPage() {
                             errorMessage
                         });
                     }
-                } else if (error?.message) {
+                } else if (normalizedError?.message) {
                     // Fallback：检查 error.message（用于非 API 错误）
-                    if (error.message.includes('fetch') || error.message.includes('network')) {
+                    if (normalizedError.message.includes('fetch') || normalizedError.message.includes('network')) {
                         errorMessage = t.errors?.AI_CONNECTION_FAILED || '网络连接失败';
-                    } else if (typeof error.data === 'string') {
+                    } else if (typeof normalizedError.data === 'string') {
                         // 如果 data 是字符串（例如 HTML 错误页），可能包含提示
                         frontendLogger.info('[AddError]', 'Raw error data', {
-                            errorDataPreview: error.data.substring(0, 100)
+                            errorDataPreview: normalizedError.data.substring(0, 100)
                         });
-                        errorMessage += ` (${error.status || 'Error'})`;
+                        errorMessage += ` (${normalizedError.status || 'Error'})`;
                     }
                 }
 
@@ -240,6 +255,21 @@ export default function AddErrorPage() {
         }
 
         try {
+            const offline = typeof window !== 'undefined' ? createOfflineErrorItemServiceFromWindow() : null;
+            if (offline) {
+                await offline.service.createAndQueueAnalyze({
+                    notebookId,
+                    ownerProfileId: offline.ownerProfileId,
+                    questionText: finalData.questionText,
+                    answerText: finalData.answerText,
+                    analysisText: finalData.analysis,
+                });
+
+                alert(t.common.messages?.saveSuccess || 'Saved!');
+                router.push(`/notebooks/${notebookId}`);
+                return;
+            }
+
             const result = await apiClient.post<{ id: string; duplicate?: boolean }>("/api/error-items", {
                 ...finalData,
                 originalImageUrl: currentImage,

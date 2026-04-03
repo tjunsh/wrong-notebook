@@ -8,11 +8,18 @@ import { createLogger } from '@/lib/logger';
 
 const logger = createLogger('ai:tag-service');
 
-interface TagTreeNode {
+interface TopLevelTagRow {
+    id: string;
+}
+
+interface TagRow {
     id: string;
     name: string;
     parentId: string | null;
-    children?: TagTreeNode[];
+}
+
+interface TagNameRow {
+    name: string;
 }
 
 /**
@@ -59,7 +66,7 @@ export async function getMathTagsFromDB(grade: 7 | 8 | 9 | 10 | 11 | 12 | null):
             select: { id: true },
         });
 
-        const topLevelIds = topLevelTags.map(t => t.id);
+        const topLevelIds = (topLevelTags as TopLevelTagRow[]).map((tag) => tag.id);
 
         // 递归获取所有叶子节点标签
         const allTags = await prisma.knowledgeTag.findMany({
@@ -76,7 +83,7 @@ export async function getMathTagsFromDB(grade: 7 | 8 | 9 | 10 | 11 | 12 | null):
 
         // 构建父子关系映射
         const childMap = new Map<string, string[]>();
-        allTags.forEach(tag => {
+        (allTags as TagRow[]).forEach((tag) => {
             if (tag.parentId) {
                 const children = childMap.get(tag.parentId) || [];
                 children.push(tag.id);
@@ -93,12 +100,12 @@ export async function getMathTagsFromDB(grade: 7 | 8 | 9 | 10 | 11 | 12 | null):
 
         // 收集所有目标年级的叶子节点
         const leafIds = new Set<string>();
-        topLevelIds.forEach(id => {
+        topLevelIds.forEach((id) => {
             collectDescendants(id).forEach(leafId => leafIds.add(leafId));
         });
 
         // 获取叶子节点名称
-        const tagNameMap = new Map(allTags.map(t => [t.id, t.name]));
+        const tagNameMap = new Map((allTags as TagRow[]).map((tag) => [tag.id, tag.name]));
         const result = Array.from(leafIds)
             .map(id => tagNameMap.get(id))
             .filter((name): name is string => !!name);
@@ -128,7 +135,7 @@ export async function getTagsFromDB(subject: string): Promise<string[]> {
             orderBy: { order: 'asc' },
         });
 
-        return tags.map(t => t.name);
+        return (tags as TagNameRow[]).map((tag) => tag.name);
     } catch (error) {
         logger.error({ error }, 'getTagsFromDB error');
         return [];
